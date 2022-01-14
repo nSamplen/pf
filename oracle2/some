@@ -1,0 +1,61 @@
+#1 запускаем контейнер
+docker run -d -it --name oracleDB -p :1521 -p :5500 -e DB_SID=cdb -e DB_PDB=osadb  -e DB_DOMAIN=ru.oracle.com container-registry.oracle.com/database/enterprise:12.2.0.1
+
+# логи
+docker logs -f oracleDB
+
+#2 подключаемся внутри контейнера
+docker exec -ti oracleDB /u01/app/oracle/product/12.2.0/dbhome_1/bin/sqlplus system/Oradoc_db1@localhost:1521/osadb.ru.oracle.com
+
+
+The Docker image has three mount points of interest, and you can map them to a corresponding directory on the host system:
+
+    /opt/oracle/oradata is the data volume for the database and required database configuration files.
+
+    /opt/oracle/scripts/setup is the directory containing either shell or SQL scripts that are executed once after the database setup (creation) has been completed.
+
+    /opt/oracle/scripts/startup is the directory containing either shell or SQL scripts that are executed every time the container starts.
+
+
+imp testing/test23@localhost:1521/hlrdb.protei.ru
+
+
+impdp testing/test23@localhost:1521/hlrdb.protei.ru directory=my_dump_dir dumpfile=HLR.dmp full=y logfile=expdpEMP_DEPT.log
+
+# создание пользователя и tablespace
+create user HLR identified by hlr;
+grant dba,connect to HLR;
+
+CREATE TABLESPACE TS_HLR DATAFILE 'tbs_perm_01.dat' autoextend on maxsize unlimited; # 20M ONLINE; /u02/app/oracle/oradata/HLR/system01.dbf
+REUSE
+    AUTOEXTEND ON NEXT 10M MAXSIZE 200M;
+
+exit;
+
+# ALTER DATABASE DATAFILE '/u02/app/oracle/oradata/HLR/orclpdb1/users01.dbf' AUTOEXTEND ON NEXT 1M MAXSIZE 1024M;
+
+#создание директории дампа
+
+#нужно иметь в виду, что должны быть права на изменение/вставку/удаление этой директории и она должна существовать
+CREATE OR REPLACE DIRECTORY MY_DUMP_DIR as '/u01/app/oracle/admin/ORCL/dpdump/my_dump_dir/';
+GRANT READ, WRITE ON DIRECTORY MY_DUMP_DIR to HLR;
+exit;
+
+# запуск impdmp
+impdp HLR/hlr@localhost:1521/hlrdb.protei.ru directory=my_dump_dir dumpfile=HLR.dmp full=y logfile=expdpEMP_DEPT.log
+
+
+
+cp HLR.dmp /u01/app/oracle/admin/ORCL/dpdump/my_dump_dir/
+sqlplus system/Oradoc_db1@localhost:1521/hlrdb.protei.ru
+sqlplus HLR/hlr@localhost:1521/hlrdb.protei.ru
+
+# пользователь?
+SUPPORTNL
+
+SELECT owner, table_name FROM all_tables WHERE tablespace_name = 'TS_HLR' ;
+
+TM_CAMEL_M_CSI
+select * from TM_CAMEL_SMS_CSI;
+
+SELECT name, text from all_source where TYPE = 'PACKAGE BODY';
